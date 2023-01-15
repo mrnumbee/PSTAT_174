@@ -1,0 +1,25 @@
+---
+title: "git"
+author: "Victor Zhang"
+date: "2023-01-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(usethis)
+
+
+```
+
+
+```{r setup, include=FALSE}
+
+use_git_config(user.name = "mrnumbee", user.email = "460251702@qq.com")
+
+
+```
+
+```{r setup, include=FALSE}
+edit_git_config()
+```
