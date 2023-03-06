@@ -1,0 +1,92 @@
+---
+title: "FINAL PROJECT"
+author: "Victor Zhang"
+date: "2023-03-06"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+
+knitr::opts_chunk$set(echo = F,
+                      message = F, 
+                      warning = F) 
+
+```
+
+```{r}
+
+library(tidyverse)
+library(readr)
+library(knitr)
+library(zoo)
+library(dplyr)
+library(lubridate)
+library(fpp2)
+library(tsibble)
+library(seasonal)
+library(seasonalview)
+library(xts)
+
+```
+
+
+# Executive Summary
+
+
+
+
+
+# Introduction
+
+```{r}
+
+```
+
+# Data Analysis and Experimental Design
+
+
+```{r}
+
+Flex_CPI <- read_csv(file = "C:/Users/victo/Desktop/project/COREFLEXCPIM159SFRBATL.csv")
+
+Unemployment_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/UNRATE.csv")
+
+Federal_Effective_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/DFF.csv")
+
+T10Y_2Y  <- read_csv(file = "C:/Users/victo/Desktop/project/T10Y2Y.csv")
+
+
+```
+
+
+
+# Time Series Modelling and Forecasting
+
+
+```{r}
+
+```
+
+
+
+# Discussion and Conclusions
+
+```{r}
+
+```
+
+
+# Bibliography and Appendix
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
