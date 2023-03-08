@@ -43,8 +43,32 @@ library(xts)
 ```
 
 
+The problem I am studying for this project is how the yield spread of the 2-year and 10-year U.S. T-notes affects the U.S. economic performance indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate.
 
 
+Recently, the U.S. Treasury yield spread, the difference between the Fed's short-term borrowing rate and the rate on longer-term U.S. Treasury notes, dropped below zero, which wasn’t a good sign for the U.S. economy.  The yield spread shifts based on actions in the bond market, and it can be seen as an important indicator of the bond market and investor confidence.
+
+
+Usually, people would earn interest when they buy any treasury note from the U.S. government since the treasury note acts like a loan that the U.S. government takes from them. The longer the loan, the higher the interest rate because the longer loan has a higher risk. For this reason, people would expect it to be cheaper to purchase short-term bonds than long-term bonds.
+
+
+The difference between the long-term bonds’ yield and the short-term bonds’ yields is called the yield spread. For example, according to “The U.S. Treasury Yield Spread” by Thomas Kenny (2022), one of the most common yield spreads is the one that presents the yield difference between the 2-year and 10-year T-notes. The yield spread rises as the difference increases and declines as the difference decreases. When it drops below zero, it means that the yield is inverted, which indicates that short-term bonds are yielding more than long-term bonds. According to the article (Kenny, 2022), The yield spread became inverted at three crucial moments in time: just prior to the recession of the early 1990s, before the bursting of the technology stock bubble in 2000-2001, and before the financial crisis of 2007-2008. In each case, the yield curve provided an advance warning of severe weakness in the stock market. From this perspective, the yield spread can be seen as a crucial predictor for the future U.S. economy, and it might have some lag effects on indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate that reflect on the current U.S. economic performance.
+
+
+The unemployment rate is the percentage of unemployed workers in the total labor force, and It is commonly recognized as a performance indicator of the labor market. In the article “How the Unemployment Rate Affects Everybody” by Elvis Picardo (2022), when workers are unemployed, their families lose wages, and the nation as a whole loses their contribution to the economy in terms of the goods or services that could have been produced. Unemployed workers also lose their purchasing power, which can lead to unemployment for other workers, creating a cascading effect that ripples through the economy. From this point of view, unemployment impacts everybody that is connected to the economy.
+
+
+On the other hand, the Consumer Price Index (CPI) is a measure of the average change over time in the prices paid by urban consumers for a market basket of consumer goods and services. The flexible CPI is calculated from a subset of goods and services included in the CPI that change price relatively frequently. According to the article “Are Some Prices in the CPI More Forward Looking Than Others? We Think So” by Michael F. Bryan and Brent H. Meyer (2010), because these services and goods change their price quickly, it assumes that when their prices are settled, the flexible CPI don’t closely relate to the inflation. Rather, it is more responsive to changes in the current economic environment since it is flexible to change.
+
+
+Lastly, the federal funds rate is the interest rate that depository banks trade federal funds (balances held at Federal Reserve Banks) with each other overnight. The federal funds effective rate is the weighted average rate for the federal funds rate amongst all depository banks, which is determined by the market and influenced by the Federal Reserve. The Federal Open Market Committee (FOMC) meets eight times a year to determine and set the federal funds target rate via buying or selling government bonds. 
+
+
+According to the “Monetary Policy” by the Board of Governors of the Federal Reserve System (2023), If the FOMC believes the economy is growing too fast and inflation pressures are inconsistent with the dual mandate of the Federal Reserve, the Committee may set a higher federal funds rate target to temper economic activity. In the opposing scenario, the FOMC may set a lower federal funds rate target to spur greater economic activity. Thus, the federal funds effective rate is closely related to the current performance of the U.S. economy and influences many other interest rates and financial products that involve interest rates.
+
+
+
+The four datasets about the yield spread of the 2-year and 10-year U.S. T-notes, the unemployment rate, flexible CPI, and the federal fund effective rate are all from FRED or Federal Reserve Economic Data. FRED is created and maintained by the Research Department at the Federal Reserve Bank of St. Louis, which makes it a trusted source. Moreover, since I am studying U.S. economic performance, I believe it is better to collect data from the institution that direct response to the U.S. economy, which is the Federal Reserve Bank.
 
 
 
