@@ -9,13 +9,20 @@ output: pdf_document
 
 knitr::opts_chunk$set(echo = F,
                       message = F, 
-                      warning = F) 
+                      warning = F,
+                      fig.width=9, fig.height=3) 
 
 ```
 
 ```{r}
 
 library(tidyverse)
+library(tidyr)
+library(ggplot2)
+library(ggfortify)
+library(forecast)
+library(Mcomp)
+library(fabletools)
 library(readr)
 library(knitr)
 library(zoo)
@@ -26,7 +33,8 @@ library(tsibble)
 library(seasonal)
 library(seasonalview)
 library(xts)
-
+library(MASS)
+library(fpp3)
 ```
 
 
@@ -43,7 +51,7 @@ library(xts)
 ```
 
 
-The problem I am studying for this project is how the yield spread of the 2-year and 10-year U.S. T-notes affects the U.S. economic performance indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate.
+The problem I am studying for this project is how the yield spread of the 2-year and 10-year U.S. T-notes is affected by the U.S. economic performance indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate.
 
 
 Recently, the U.S. Treasury yield spread, the difference between the Fed's short-term borrowing rate and the rate on longer-term U.S. Treasury notes, dropped below zero, which wasn’t a good sign for the U.S. economy.  The yield spread shifts based on actions in the bond market, and it can be seen as an important indicator of the bond market and investor confidence.
@@ -52,7 +60,7 @@ Recently, the U.S. Treasury yield spread, the difference between the Fed's short
 Usually, people would earn interest when they buy any treasury note from the U.S. government since the treasury note acts like a loan that the U.S. government takes from them. The longer the loan, the higher the interest rate because the longer loan has a higher risk. For this reason, people would expect it to be cheaper to purchase short-term bonds than long-term bonds.
 
 
-The difference between the long-term bonds’ yield and the short-term bonds’ yields is called the yield spread. For example, according to “The U.S. Treasury Yield Spread” by Thomas Kenny (2022), one of the most common yield spreads is the one that presents the yield difference between the 2-year and 10-year T-notes. The yield spread rises as the difference increases and declines as the difference decreases. When it drops below zero, it means that the yield is inverted, which indicates that short-term bonds are yielding more than long-term bonds. According to the article (Kenny, 2022), The yield spread became inverted at three crucial moments in time: just prior to the recession of the early 1990s, before the bursting of the technology stock bubble in 2000-2001, and before the financial crisis of 2007-2008. In each case, the yield curve provided an advance warning of severe weakness in the stock market. From this perspective, the yield spread can be seen as a crucial predictor for the future U.S. economy, and it might have some lag effects on indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate that reflect on the current U.S. economic performance.
+The difference between the long-term bonds’ yield and the short-term bonds’ yields is called the yield spread. For example, according to “The U.S. Treasury Yield Spread” by Thomas Kenny (2022), one of the most common yield spreads is the one that presents the yield difference between the 2-year and 10-year T-notes. The yield spread rises as the difference increases and declines as the difference decreases. When it drops below zero, it means that the yield is inverted, which indicates that short-term bonds are yielding more than long-term bonds. According to the article (Kenny, 2022), The yield spread became inverted at three crucial moments in time: just prior to the recession of the early 1990s, before the bursting of the technology stock bubble in 2000-2001, and before the financial crisis of 2007-2008. In each case, the yield curve provided an advance warning of severe weakness in the stock market. From this perspective, the yield spread can be seen as a crucial predictor for the future U.S. economy, and it might have some lag effects associate with economic indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate that reflect on the current U.S. economic performance.
 
 
 The unemployment rate is the percentage of unemployed workers in the total labor force, and It is commonly recognized as a performance indicator of the labor market. In the article “How the Unemployment Rate Affects Everybody” by Elvis Picardo (2022), when workers are unemployed, their families lose wages, and the nation as a whole loses their contribution to the economy in terms of the goods or services that could have been produced. Unemployed workers also lose their purchasing power, which can lead to unemployment for other workers, creating a cascading effect that ripples through the economy. From this point of view, unemployment impacts everybody that is connected to the economy.
@@ -72,31 +80,227 @@ The four datasets about the yield spread of the 2-year and 10-year U.S. T-notes,
 
 
 
-
-
-
-
-
-
-
-
-
-
 # Data Analysis and Experimental Design
 
 
 ```{r}
 
 Flex_CPI <- read_csv(file = "C:/Users/victo/Desktop/project/COREFLEXCPIM159SFRBATL.csv")
-
+Flex_CPI_ts <- Flex_CPI[,2] %>% ts(start = 2000, frequency = 12)
+  
 Unemployment_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/UNRATE.csv")
+Unemployment_Rate_ts <- Unemployment_Rate[,2] %>% ts(start = 2000, frequency = 12)
+
 
 Federal_Effective_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/DFF.csv")
+Federal_Effective_Rate_ts <- Federal_Effective_Rate[,2] %>% ts(start = 2000, frequency = 12)
+
 
 T10Y_2Y  <- read_csv(file = "C:/Users/victo/Desktop/project/T10Y2Y.csv")
+T10Y_2Y_ts <- T10Y_2Y[,2] %>% ts(start = 2000, frequency = 12)
+
+all_ts <- cbind(T10Y_2Y_ts, Unemployment_Rate_ts, Federal_Effective_Rate_ts, Flex_CPI_ts*0.01)
+
+```
+
+
+
+```{r}
+autoplot(T10Y_2Y_ts)
+
+T10Y_2Y_ts_diff <- diff(T10Y_2Y_ts)
+
+autoplot(T10Y_2Y_ts_diff)
+
+Box.test(T10Y_2Y_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(T10Y_2Y_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+# can't do boxcox since involves negative values
+# see evidence to reject the Null and so there is insufficient evidence to suggest we have not got useful autocorrelation structure - so we can model this with time series models (need test statistic, decision rules, euqations, and babababa)
+
+T10Y_2Y_ts_fit1 <- auto.arima(T10Y_2Y_ts_diff, max.order = 12)
+
+summary(T10Y_2Y_ts_fit1)
+
+checkresiduals(T10Y_2Y_ts_fit1)
+
+
+
+
+T10Y_2Y_ts_decomp <- decompose(T10Y_2Y_ts)
+
+autoplot(T10Y_2Y_ts_decomp)
+
+checkresiduals(T10Y_2Y_ts_decomp$trend)
+checkresiduals(diff(T10Y_2Y_ts_decomp$trend))
+
+Box.test(diff(T10Y_2Y_ts_decomp$trend), lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(diff(T10Y_2Y_ts_decomp$trend), lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+T10Y_2Y_ts_fit2 <- auto.arima(diff(T10Y_2Y_ts_decomp$trend), max.order = 12)
+
+summary(T10Y_2Y_ts_fit2)
+
+checkresiduals(T10Y_2Y_ts_fit2)
+
+```
+
+
+```{r}
+
+autoplot(Flex_CPI_ts)
+
+Flex_CPI_ts_diff <- diff(Flex_CPI_ts)
+
+autoplot(Flex_CPI_ts_diff)
+
+Box.test(Flex_CPI_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(Flex_CPI_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+# can't do boxcox since involves negative values
+# see evidence to reject the Null and so there is insufficient evidence to suggest we have not got useful autocorrelation structure - so we can model this with time series models (need test statistic, decision rules, euqations, and babababa)
+
+Flex_CPI_ts_fit1 <- auto.arima(Flex_CPI_ts_diff, max.order = 12)
+
+summary(Flex_CPI_ts_fit1)
+
+checkresiduals(Flex_CPI_ts_fit1)
+
+
+
+
+Flex_CPI_ts_decomp <- decompose(Flex_CPI_ts)
+
+autoplot(Flex_CPI_ts_decomp)
+
+
+checkresiduals(Flex_CPI_ts_decomp$random)
+checkresiduals(diff(Flex_CPI_ts_decomp$random))
+
+Box.test(diff(Flex_CPI_ts_decomp$random), lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(diff(Flex_CPI_ts_decomp$random), lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+Flex_CPI_ts_fit2 <- auto.arima(diff(Flex_CPI_ts_decomp$random), max.order = 12)
+
+summary(Flex_CPI_ts_fit2)
+checkresiduals(Flex_CPI_ts_fit2)
+
 
 
 ```
+
+
+
+```{r}
+
+autoplot(Unemployment_Rate_ts)
+
+Unemployment_Rate_ts_diff <- diff(Unemployment_Rate_ts)
+
+autoplot(Unemployment_Rate_ts_diff)
+
+Box.test(Unemployment_Rate_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(Unemployment_Rate_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+boxcox(lm(Unemployment_Rate_ts ~ 1)) # ngeative 1 power transformation
+
+
+Unemployment_Rate_ts_new <- Unemployment_Rate_ts**(-1)
+Unemployment_Rate_ts_diff2 <- diff(Unemployment_Rate_ts_new)
+
+autoplot(Unemployment_Rate_ts_diff2)
+
+Box.test(Unemployment_Rate_ts_diff2, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(Unemployment_Rate_ts_diff2, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+
+
+Unemployment_Rate_ts_fit1 <- auto.arima(Unemployment_Rate_ts_diff2, max.order = 12)
+
+summary(Unemployment_Rate_ts_fit1)
+
+checkresiduals(Unemployment_Rate_ts_fit1)
+
+
+
+
+Unemployment_Rate_ts_decomp <- decompose(Unemployment_Rate_ts)
+
+autoplot(Unemployment_Rate_ts_decomp)
+
+
+checkresiduals(Unemployment_Rate_ts_decomp$trend)
+checkresiduals(diff(Unemployment_Rate_ts_decomp$trend))
+
+Box.test(diff(Unemployment_Rate_ts_decomp$trend), lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(diff(Unemployment_Rate_ts_decomp$trend), lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+Unemployment_Rate_ts_fit2 <- auto.arima(diff(Unemployment_Rate_ts_decomp$trend), max.order = 12)
+
+summary(Unemployment_Rate_ts_fit2)  #compare AIC, residuals, and RMSE(lowever, better)
+checkresiduals(Unemployment_Rate_ts_fit2)
+
+
+```
+
+
+
+```{r}
+
+autoplot(Federal_Effective_Rate_ts)
+
+Federal_Effective_Rate_ts_diff <- diff(Federal_Effective_Rate_ts)
+
+autoplot(Federal_Effective_Rate_ts_diff)
+
+Box.test(Federal_Effective_Rate_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(Federal_Effective_Rate_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+
+boxcox(lm(Federal_Effective_Rate_ts ~ 1)) # 0, indicates log (natural log) transformation
+
+
+Federal_Effective_Rate_ts_new <- log(Federal_Effective_Rate_ts)
+Federal_Effective_Rate_ts_diff2 <- diff(Federal_Effective_Rate_ts_new)
+
+autoplot(Federal_Effective_Rate_ts_diff2)
+
+Box.test(Federal_Effective_Rate_ts_diff2, lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(Federal_Effective_Rate_ts_diff2, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+
+
+Federal_Effective_Rate_ts_fit1 <- auto.arima(Federal_Effective_Rate_ts_diff2, max.order = 12)
+
+summary(Federal_Effective_Rate_ts_fit1)
+
+checkresiduals(Federal_Effective_Rate_ts_fit1)
+
+
+
+
+Federal_Effective_Rate_ts_decomp <- decompose(Federal_Effective_Rate_ts)
+
+autoplot(Federal_Effective_Rate_ts_decomp)
+
+
+checkresiduals(diff(Federal_Effective_Rate_ts_decomp$trend))
+
+Box.test(diff(Federal_Effective_Rate_ts_decomp$trend), lag = 1, type = c("Box-Pierce"), fitdf = 0)
+Box.test(diff(Federal_Effective_Rate_ts_decomp$trend), lag = 1, type = c("Ljung-Box"), fitdf = 0)
+
+Federal_Effective_Rate_ts_fit2 <- auto.arima(diff(Federal_Effective_Rate_ts_decomp$trend), max.order = 12)
+
+summary(Federal_Effective_Rate_ts_fit2)
+checkresiduals(Federal_Effective_Rate_ts_fit2)
+
+```
+
+
+
+
+
+
 
 
 
@@ -114,6 +318,22 @@ T10Y_2Y  <- read_csv(file = "C:/Users/victo/Desktop/project/T10Y2Y.csv")
 ```{r}
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
