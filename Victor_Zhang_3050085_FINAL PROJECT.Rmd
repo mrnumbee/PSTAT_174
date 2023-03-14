@@ -1,7 +1,6 @@
 ---
 title: "FINAL PROJECT"
 author: "Victor Zhang"
-date: "2023-03-06"
 output: pdf_document
 ---
 
@@ -10,11 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = F,
                       message = F, 
                       warning = F,
-                      fig.width=9, fig.height=3) 
+                      fig.width=9, fig.height=3) # adjust figure size
 
 ```
 
 ```{r}
+# lodad pacages that are needed
 
 library(tidyverse)
 library(tidyr)
@@ -37,10 +37,20 @@ library(xts)
 library(MASS)
 library(fpp3)
 library(patchwork)
-
+library(readr)
+library(tinytex) #latex
 ```
 
 # Executive Summary
+
+The goal of this project is to study how the yield spread of the 2-year and 10-year U.S. T-notes, a common U.S. economic performance predictor, is affected by the U.S. economic performance indicators including the unemployment rate, the flexible CPI, and the federal fund effective rate. Moreover, if possible, we want to find out whether we can use the above indicators to forecast the yield spread for the next 12 months.
+
+In summary, we navigate the yield spread of the 2-year and 10-year U.S. T-notes, the unemployment rate, the flexible CPI, and the federal fund effective rate as time series via using autoplot() function. Through analyzing the time series structures and autocorrelations, performing data transformations, and applying suitable time series decompositions, we find the potential candidates for identifying the models of our four time series. After applying the Box-Jenkins methodology with the auto.arima() function that uses the Hyndman-Khandakar algorithm, we find the most suitable model for describing each time series and confirm that each model's residuals are close to white noise.
+
+According to the data summary information and model fitting results, we identify the yield spread of the 2-year and 10-year U.S. T-notes as SARIMA(3,0,2)x(1,0,0)[12] model, the flexible CPI as ARIMA(2,0,1) model, the unemployment rate as ARIMA(0,0,1) model, and the federal found effective rate as ARIMA(3,0,3) model. Then we also perform the Hyndman-Khandakar algorithm to fit the yield spread regression models with ARIMA errors where we use the yield spread as response and one of the three other time series as predictor. Repeating the above process for three times and comparing the results we obtained, we decide to use the yield spread regression model with SARIMA(0,1,2)(1,0,0)[12] errors that adapts the federal fund effective rate as a predictor for forecasting. 
+
+In conclusion, we find that the yield spread of the 2-year and 10-year U.S. T-notes is not affected by the unemployment rate and the flexible CPI, but rather by the federal fund effective rate, which is reasonable from both modeling and economic perspectives. However, the most suitable model that describes the relationship between the yield spread and the federal fund effective rate is worse than the yield spread identification model on forecasting, which might cause by the high mean of the federal fund effective rate. This suggests that to perform better forecasting, further adjustments and transformations are needed.
+
 
 # Introduction
 
@@ -48,11 +58,7 @@ library(patchwork)
 
 ```
 
-The problem I am studying for this project is how the yield spread of the 2-year and 10-year U.S. T-notes is affected by the U.S. economic performance indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate.
-
-Recently, the U.S. Treasury yield spread, the difference between the Fed's short-term borrowing rate and the rate on longer-term U.S. Treasury notes, dropped below zero, which wasn't a good sign for the U.S. economy. The yield spread shifts based on actions in the bond market, and it can be seen as an important predictor for the future of the U.S. economic.
-
-Usually, people would earn interest when they buy any treasury note from the U.S. government since the treasury note acts like a loan that the U.S. government takes from them. The longer the loan, the higher the interest rate because the longer loan has a higher risk. For this reason, people would expect it to be cheaper to purchase short-term bonds than long-term bonds since the short-term bonds have lowers risk and the U.S. government would also pay lower interest rate for them.
+Recently, the U.S. Treasury yield spread, the difference between the Fed's short-term borrowing rate and the rate on longer-term U.S. Treasury notes, dropped below zero, which wasn't a good sign for the U.S. economy. The yield spread shifts based on actions in the bond market, and it can be seen as an important predictor for the future of the U.S. economic. Usually, people would earn interest when they buy any treasury note from the U.S. government since the treasury note acts like a loan that the U.S. government takes from them. The longer the loan, the higher the interest rate because the longer loan has a higher risk. For this reason, people would expect it to be cheaper to purchase short-term bonds than long-term bonds since the short-term bonds have lowers risk and the U.S. government would also pay lower interest rate for them.
 
 The difference between the long-term bonds' yield and the short-term bonds' yields is called the yield spread. For example, according to "The U.S. Treasury Yield Spread" by Thomas Kenny (2022), one of the most common yield spreads is the one that presents the yield difference between the 2-year T-notes (Treasury Bonds) and 10-year T-notes. This yield spreads is calculated by using the 10-year T-notes' yield minus the 2-year T-notes' yield, and it rises as the difference increases and declines as the difference decreases. When it drops below zero, it means that the yield is inverted, which indicates that short-term bonds are yielding more than long-term bonds. According to the article (Kenny, 2022), The yield spread became inverted at three crucial moments in time: just prior to the recession of the early 1990s, before the bursting of the technology stock bubble in 2000-2001, and before the financial crisis of 2007-2008. In each case, the yield curve provided an advance warning of severe weakness in the stock market. From this perspective, the yield spread can be seen as a crucial predictor for the future U.S. economy, and it might have some lag effects associate with economic indicators such as the unemployment rate, flexible CPI, and the federal fund effective rate that reflect on the current U.S. economic performance.
 
@@ -70,10 +76,10 @@ The four datasets, including the yield spread of the 2-year and 10-year U.S. T-n
 
 ```{r}
 
-Flex_CPI <- read_csv(file = "C:/Users/victo/Desktop/project/COREFLEXCPIM159SFRBATL.csv")
-Flex_CPI_ts <- Flex_CPI[,2] %>% ts(start = 2000, frequency = 12)
+Flex_CPI <- read_csv(file = "C:/Users/victo/Desktop/project/COREFLEXCPIM159SFRBATL.csv") # load raw data
+Flex_CPI_ts <- Flex_CPI[,2] %>% ts(start = 2000, frequency = 12) # extract the wanted value and convert it to ts object with monthly frequency 
   
-Unemployment_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/UNRATE.csv")
+Unemployment_Rate <- read_csv(file = "C:/Users/victo/Desktop/project/UNRATE.csv") 
 Unemployment_Rate_ts <- Unemployment_Rate[,2] %>% ts(start = 2000, frequency = 12)
 
 
@@ -84,57 +90,73 @@ Federal_Effective_Rate_ts <- Federal_Effective_Rate[,2] %>% ts(start = 2000, fre
 T10Y_2Y  <- read_csv(file = "C:/Users/victo/Desktop/project/T10Y2Y.csv")
 T10Y_2Y_ts <- T10Y_2Y[,2] %>% ts(start = 2000, frequency = 12)
 
-all_ts <- cbind(T10Y_2Y_ts, Unemployment_Rate_ts, Federal_Effective_Rate_ts, Flex_CPI_ts*0.01)
+all_ts <- cbind(T10Y_2Y_ts, Unemployment_Rate_ts, Federal_Effective_Rate_ts, Flex_CPI_ts*0.01) # combine all ts objects for aggregate correlation analysis
 
-GGally::ggpairs(as.data.frame(all_ts[,1:4]))
-
-```
-
-```{r}
-p1 <- autoplot(T10Y_2Y_ts)
-
-T10Y_2Y_ts_diff <- diff(T10Y_2Y_ts)
-
-p2 <- autoplot(T10Y_2Y_ts_diff)
-
-p1 + p2
-
-par(mfrow=c(1,2))
-acf(T10Y_2Y_ts_diff, na.action = na.pass)
-pacf(T10Y_2Y_ts_diff, na.action = na.pass)
+GGally::ggpairs(as.data.frame(all_ts[,1:4])) # plot the aggregate correlation analysis
 
 ```
 
-\footnotesize 
+First, we will load our four datasets and convert them into time series objects so that we can navigate them with timer series packages in R. All time series start from January 2000 to January 2023 with monthly frequency, and each series has 277 observations in total. The reason that I select such a time period is that this time period not only allows me to easily put all series in the same timeframe but also exclude some chaotic data before January 2000. Before we start analyzing our time series, we can explore correlations and relationships among them through an aggregate correlation plot. The above correlation plots show that our main study object, the yield spread of the 2-year and 10-year U.S. T-notes, in general, has a non-linear negative correlation relationship with the other time series. Notice that I multiply the flexible CPI by 0.01, which is only for plotting purposes since its highest value is over 200 while others are lower than 10. Overall, the negative correlation relationship amongst time series indicates we can explore the relationship among them.
 
 ```{r}
-Box.test(T10Y_2Y_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
-Box.test(T10Y_2Y_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
-# can't do boxcox since involves negative values
-# see evidence to reject the Null and so there is insufficient evidence to suggest we have not got useful autocorrelation structure - so we can model this with time series models (need test statistic, decision rules, euqations, and babababa)
+p1 <- autoplot(T10Y_2Y_ts) # plot the raw ts 
+
+T10Y_2Y_ts_diff <- diff(T10Y_2Y_ts) # apply one time differencing
+
+p2 <- autoplot(T10Y_2Y_ts_diff) # plot the pervious step's result
+
+p1 + p2 # par the plots
+
+```
+
+The yield spread of the 2-year and 10-year U.S. T-notes is represented as *T10Y_2Y_ts* in the following data analysis process. It shows the monthly difference between the yield of the 10-year and the 2-year U.S. T-notes. The unit is in percentage since the yield of both bonds is in percentage. The data is not seasonally adjusted according to the data source, and we can see there are many tiny ups and downs in the plot. Also, the yield spread has dropped below zero three times since 2000, and after each drop the yield spread will come to a spike, which could be informative for modeling and forecasting. In general, the plot shows that the raw data of the yield spread of the 2-year and 10-year U.S. T-notes is not stationary, and we need some transformations on the data before we fit any model. Since the data has negative values, it is better not to apply the box-cox transformation. Thus, we will try to difference, apply a time series derivative, it one time and denote it as *T10Y_2Y_ts_diff*. After plotting the result, we can see that the new data looks better than before. Then we can see *T10Y_2Y_ts_diff*'s ACF and PACF plot to check its correlation.
+
+```{r}
+
+par(mfrow=c(1,2)) # par the plots
+acf(T10Y_2Y_ts_diff, main = "T10Y_2Y_ts_diff", na.action = na.pass) # plot acf, na.actions is needed since there are NA values in the ts
+pacf(T10Y_2Y_ts_diff, main = "T10Y_2Y_ts_diff", na.action = na.pass) # plot pacf, na.actions is needed since there are NA values in the ts
+
+```
+
+According to *Forecasting: Principles and Practice* (Rob and George, 2018), ACF is the abbreviation of the autocorrelation function. Similar to how correlation measures the extent of a linear relationship between two variables, autocorrelation measures the linear relationship between lagged values of a time series, and the ACF gives measurement for it. PACF is the abbreviation of the partial autocorrelations function. According to the *lecture notes* by professor Peters (2023), The partial autocorrelation function gives the partial correlation of a stationary time series with its own lagged values, regressed against the values of the time series at all shorter lags, which is very important for identifying the extent of the lag in time series models. Both ACF and PACF plots suggest that there are some time series structures in *T10Y_2Y_ts_diff*, which is a good sign for us to use *T10Y_2Y_ts_diff* for modeling later.
+
+\footnotesize
+
+```{r}
+Box.test(T10Y_2Y_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0) # box test for white noise property, type is Ljung-Box
+
 ```
 
 \normalsize
 
+Besides the above plots, we can also use the Ljung--Box test to check whether the observed correlations in the data result from randomness of the sampling process. The test has two hypothesizes that\
+$H_{0}$: The data are independently distributed\
+$H_{a}$: The data are not independently distributed; they exhibit serial correlation\
+The test statistic is: $Q_{LB} = T(T+2)\sum_{j=1}^{k}\frac{\hat{p}^{2}_{Y}(j)}{T-j}$ where T is the sample size, $\hat{p}_{Y}(j)$ is the sample autocorrelation at lag j, and k is the number of lags being tested. Under $H_{0}$ the statistic Q asymptotically follows $X^{2}_{k}$, a chi-square distribution with k degrees of freedom. For significance level $\alpha$, we reject $H_{0}$ if Q has a p-value that is smaller than $X^{2}_{1-\alpha,k}$'s p-value. In other words, if we have a very small p-value for the Ljung--Box test and reject the $H_{0}$ hypothesis, the tested time series will have a useful autocorrelation structure that we can use for fitting the model later. After we ran the Ljung--Box test on *T10Y_2Y_ts_diff*, we got a very small p-value. Thus, the *T10Y_2Y_ts_diff* can be used for fitting the model later.
+
 ```{r}
 
-T10Y_2Y_ts_decomp <- decompose(T10Y_2Y_ts)
+T10Y_2Y_ts_decomp <- decompose(T10Y_2Y_ts, type = "multiplicative") # multiplicative decomposing for the ts object according to the book
 
 autoplot(T10Y_2Y_ts_decomp)
 
 par(mfrow=c(1,2))
-acf(T10Y_2Y_ts_decomp$random, na.action = na.pass)
-pacf(T10Y_2Y_ts_decomp$random, na.action = na.pass)
+acf(T10Y_2Y_ts_decomp$random, main = "T10Y_2Y_ts_decomp$random", na.action = na.pass) # select the random(remainder) part since we want stationary ts 
+pacf(T10Y_2Y_ts_decomp$random, main = "T10Y_2Y_ts_decomp$random", na.action = na.pass)
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(T10Y_2Y_ts_decomp$random, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(T10Y_2Y_ts_decomp$random, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
+
+Even though we have already found one time series that can be used for fitting the models later, we can use the decomposition approach to find another time series that have the potential to perform better at fitting model. According to *Forecasting: Principles and Practice* (Rob and George, 2018), if we assume an additive decomposition, then we can write a time series as $y_{t} = S_{t} + T_{t} + R_{t}$. On the other hand, If we assume a multiplicative decomposition, we can write a time series as $y_{t} = S_{t} \times T_{t} \times R_{t}$. In the above equations, $y_{t}$ is the data, $S_{t}$ is the seasonal component, $T_{t}$ is the trend-cycle component, and $R_{t}$ is the remainder (random) component, all at period $t$. Also, due to the fact that the variations in the economic time series tend to be proportional to the level of the time series, the authors suggest that multiplicative decompositions would be more appropriate for economic time series.
+
+After decomposing *T10Y_2Y_ts* via multiplicative decomposition, we find the three components of *T10Y_2Y_ts*. Since we want to use stationary time series that have stable mean and variance for fitting model and forecasting, we will only use the remainder part which denotes as *T10Y_2Y_ts_decomp\$random*. The ACF and PACF suggest that there are some time series structures in *T10Y_2Y_ts_decomp\$andom*. Also, the Ljung--Box test on *T10Y_2Y_ts_decomp\$random* shows that the tested time series will have a useful autocorrelation structure that we can use for fitting the model later. Hence, we will save the *T10Y_2Y_ts_decomp\$random* and use it for fitting the model later.
 
 ```{r}
 
@@ -145,45 +167,50 @@ Flex_CPI_ts_diff <- diff(Flex_CPI_ts)
 p4 <- autoplot(Flex_CPI_ts_diff)
 
 p3 + p4
+```
+
+The flexible CPI is represented as *Flex_CPI_ts* in the following data analysis process. It shows the monthly index of the flexible CPI with a scale value of 100 for December 1967, the first available record of the flexible CPI. The data is seasonally adjusted according to the data source, but we still can see many tiny ups and downs in the plot, which is a sign to perform a transformation. Also, the flexible CPI has dropped below zero four times since 2000, and right after each drop it will come to a spike, which could be informative for modeling and forecasting. In general, the plot shows that the raw data of the flexible CPI is not stationary, and we need to do some transformations on the data before we fit any model. Since the data has negative values, it is better not to apply the box-cox transformation. Thus, we will try to difference it one time and denote it as *Flex_CPI_ts_diff*. After plotting the result, we can see that the new data looks better than before. Then we can see *Flex_CPI_ts_diff*'s ACF and PACF plot to check its correlation.
+
+```{r}
 
 par(mfrow=c(1,2))
-acf(Flex_CPI_ts_diff, na.action = na.pass)
-pacf(Flex_CPI_ts_diff, na.action = na.pass)
+acf(Flex_CPI_ts_diff,  main = "Flex_CPI_ts_diff", na.action = na.pass)
+pacf(Flex_CPI_ts_diff,  main = "Flex_CPI_ts_diff", na.action = na.pass)
 
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Flex_CPI_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Flex_CPI_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
-# can't do boxcox since involves negative values
-# see evidence to reject the Null and so there is insufficient evidence to suggest we have not got useful autocorrelation structure - so we can model this with time series models (need test statistic, decision rules, euqations, and babababa)
 ```
 
 \normalsize
 
+Both ACF and PACF plots suggest that there are some time series structures in *Flex_CPI_ts_diff*, which is a good sign for us to use *Flex_CPI_ts_diff* for modeling later. After we ran the Ljung--Box test on *Flex_CPI_ts_diff*, we got a very small p-value. Thus, the *Flex_CPI_ts_diff* can be used for fitting the model later.
+
 ```{r}
 
 
-Flex_CPI_ts_decomp <- decompose(Flex_CPI_ts)
+Flex_CPI_ts_decomp <- decompose(Flex_CPI_ts, type = "multiplicative")
 
 autoplot(Flex_CPI_ts_decomp)
 
 
 par(mfrow=c(1,2))
-acf(Flex_CPI_ts_decomp$random, na.action = na.pass)
-pacf(Flex_CPI_ts_decomp$random, na.action = na.pass)
+acf(Flex_CPI_ts_decomp$random, main = "Flex_CPI_ts_decomp$random", na.action = na.pass)
+pacf(Flex_CPI_ts_decomp$random, main = "Flex_CPI_ts_decomp$random", na.action = na.pass)
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Flex_CPI_ts_decomp$random, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Flex_CPI_ts_decomp$random, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
+
+After decomposing *Flex_CPI_ts* via multiplicative decomposition, we find the three components of *Flex_CPI_ts*. Since we want to use stationary time series that have stable mean and variance for fitting model and forecasting, we will only use the remainder part which denotes as *Flex_CPI_ts_decomp\$random*. The ACF and PACF suggest that there are some time series structures in *Flex_CPI_ts_decomp\$random*. Also, the Ljung--Box test on *Flex_CPI_ts_decomp\$random* shows that the tested time series will have a useful autocorrelation structure that we can use for fitting the model later. Hence, we will save the *Flex_CPI_ts_decomp\$random* and use it for fitting the model later.
 
 ```{r}
 
@@ -198,64 +225,75 @@ p5 + p6
 
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Unemployment_Rate_ts_diff, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Unemployment_Rate_ts_diff, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
 
+The unemployment rate is represented as *Unemployment_Rate_ts* in the following data analysis process. It shows the monthly number of unemployed as a percentage of the labor force, and it is restricted to people 16 years of age and older, who currently reside in 1 of the 50 states or the District of Columbia, who do not reside in institutions (e.g., penal and mental facilities, homes for the aged), and who are not on active duty in the Armed Forces. The data is seasonally adjusted according to the data source, but we still can see many tiny ups and downs in the plot, which is a sign to perform a transformation. Also, the unemployment rate has increased dramatically three times since 2000, which could be informative for modeling and forecasting. In general, the plots show that the raw data of the unemployment rate is not stationary even after one time differencing, and we need to do some transformations on the data before we fit any model. Besides that, the Ljung--Box test on the raw data also gives a large p-value, which indicates that the raw data is close to independently distributed, and there doesn't exist a useful autocorrelation structure.
+
 ```{r}
-boxcox(lm(Unemployment_Rate_ts ~ 1)) # ngeative 1 power transformation
+boxcox(lm(Unemployment_Rate_ts ~ 1)) # the result suggests ngeative 1 power transformation
 
 
-Unemployment_Rate_ts_new <- Unemployment_Rate_ts**(-1)
+Unemployment_Rate_ts_new <- Unemployment_Rate_ts**(-1) # perform transformation
 
-p7 <- autoplot(Unemployment_Rate_ts_new)
+```
 
-Unemployment_Rate_ts_diff2 <- diff(Unemployment_Rate_ts_new)
+Since the data doesn't have negative values, we can apply the box-cox transformation. According to the *lecture note* (Peters, 2023), the goal of the box-cox transformation is to transform the data to be closer to Normally distributed, and it involves an exponent, lambda ($\lambda$), which varies from 5 to 5. The "optimal value" is the one which results in the best approximation of a normal distribution curve. The transformation of Y has the form: $y(\lambda) = \left\{\begin{matrix} \frac{y^{\lambda}-1}{\lambda} & if \lambda \neq 0\\ log(y)& if \lambda = 0\end{matrix}\right.$\
+Except for value 0, The optimal $\lambda$ value gives the optimal number of power that we should transform our data. If we have $\lambda$ value equals 0, we will need to perform a natural log transformation on our data. After ran the box-cox transformation, the plot suggests that the optimal $\lambda$ is -1. Hence, we will raise our raw data *Unemployment_Rate_ts* with -1 power and denote it as *Unemployment_Rate_ts_new*.
+
+```{r}
+
+
+p7 <- autoplot(Unemployment_Rate_ts_new) # check new result
+
+Unemployment_Rate_ts_diff2 <- diff(Unemployment_Rate_ts_new) # differencing as usual due to analysis
 
 p8 <- autoplot(Unemployment_Rate_ts_diff2)
 
 p7 + p8
 
 par(mfrow=c(1,2))
-acf(Unemployment_Rate_ts_diff2, na.action = na.pass)
-pacf(Unemployment_Rate_ts_diff2, na.action = na.pass)
+acf(Unemployment_Rate_ts_diff2, main = "Unemployment_Rate_ts_diff2", na.action = na.pass)
+pacf(Unemployment_Rate_ts_diff2, main = "Unemployment_Rate_ts_diff2", na.action = na.pass)
 
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Unemployment_Rate_ts_diff2, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Unemployment_Rate_ts_diff2, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
 
+After plotting the new data, we can see that it is not stationary. Thus, we will try to difference it one time and denote it as *Unemployment_Rate_ts_diff2*. After plotting the result, we can see that the new data looks better than before. Moreover, both ACF and PACF plots suggest that there are some time series structures in *Unemployment_Rate_ts_diff2*, which is a good sign for us to use *Unemployment_Rate_ts_diff2* for modeling later. After we ran the Ljung--Box test on *Unemployment_Rate_ts_diff2*, we got a very small p-value. Thus, the *Unemployment_Rate_ts_diff2* can be used for fitting the model later.
+
 ```{r}
 
-Unemployment_Rate_ts_decomp <- decompose(Unemployment_Rate_ts)
+Unemployment_Rate_ts_decomp <- decompose(Unemployment_Rate_ts,type = "multiplicative")
 
 autoplot(Unemployment_Rate_ts_decomp)
 
 par(mfrow=c(1,2))
-acf(Unemployment_Rate_ts_decomp$random, na.action = na.pass)
-pacf(Unemployment_Rate_ts_decomp$random, na.action = na.pass)
+acf(Unemployment_Rate_ts_decomp$random, main = "Unemployment_Rate_ts_decomp$random", na.action = na.pass)
+pacf(Unemployment_Rate_ts_decomp$random,main = "Unemployment_Rate_ts_decomp$random",  na.action = na.pass)
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Unemployment_Rate_ts_decomp$random, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Unemployment_Rate_ts_decomp$random, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 
 ```
 
 \normalsize
+
+After decomposing *Unemployment_Rate_ts* via multiplicative decomposition, we find the three components of *Unemployment_Rate_ts*. Since we want to use stationary time series that have stable mean and variance for fitting model and forecasting, we will only use the remainder part which denotes as *Unemployment_Rate_ts_decomp\$random*. The ACF and PACF suggest that there are some time series structures in *Unemployment_Rate_ts_decomp\$random*. Also, the Ljung--Box test on *Unemployment_Rate_ts_decomp\$random* shows that the tested time series will have a useful autocorrelation structure that we can use for fitting the model later. Hence, we will save the *Unemployment_Rate_ts_decomp\$random* and use it for fitting the model later.
 
 ```{r}
 
@@ -267,15 +305,23 @@ p10 <- autoplot(Federal_Effective_Rate_ts_diff)
 
 p9 + p10
 
-boxcox(lm(Federal_Effective_Rate_ts ~ 1)) # 0, indicates log (natural log) transformation
+
+```
+
+The federal funds effective rate is represented as *Federal_Effective_Rate_ts* in the following data analysis process. It shows the monthly weighted average rate for the interest rate at which depository banks trade federal funds. The data is not seasonally adjusted according to the data source, which is a sign to perform a transformation. Also, the federal funds effective rate was very close to zero for two periods since 2000, which could be informative for modeling and forecasting. In general, the plots show that the raw data of the federal funds effective rate is not stationary even after one time differencing, and we need to do some transformations on the data before we fit any model.
+
+```{r}
 
 
-Federal_Effective_Rate_ts_new <- log(Federal_Effective_Rate_ts)
-
-p11 <- autoplot(Federal_Effective_Rate_ts_new)
+boxcox(lm(Federal_Effective_Rate_ts ~ 1)) # pick lambda equals 0, indicates log (natural log) transformation
 
 
-Federal_Effective_Rate_ts_diff2 <- diff(Federal_Effective_Rate_ts_new)
+Federal_Effective_Rate_ts_new <- log(Federal_Effective_Rate_ts) # perform transformation
+
+p11 <- autoplot(Federal_Effective_Rate_ts_new) # analysis result
+
+
+Federal_Effective_Rate_ts_diff2 <- diff(Federal_Effective_Rate_ts_new) # differencing as usual due to analysis
 
 p12 <- autoplot(Federal_Effective_Rate_ts_diff2)
 
@@ -283,198 +329,226 @@ p11 + p12
 
 
 par(mfrow=c(1,2))
-acf(Federal_Effective_Rate_ts_diff2, na.action = na.pass)
-pacf(Federal_Effective_Rate_ts_diff2, na.action = na.pass)
+acf(Federal_Effective_Rate_ts_diff2,  main = "Federal_Effective_Rate_ts_diff2", na.action = na.pass)
+pacf(Federal_Effective_Rate_ts_diff2,  main = "Federal_Effective_Rate_ts_diff2", na.action = na.pass)
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Federal_Effective_Rate_ts_diff2, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Federal_Effective_Rate_ts_diff2, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
 
+Since the data doesn't have negative values, it is easy for us to apply the box-cox transformation. After ran the box-cox transformation, the plot suggests that the optimal $\lambda$ is 0. Hence, we will perform natural log transformation on the raw data and denote it as *Federal_Effective_Rate_ts_new*. After plotting the new data, we can see that it is not stationary. Thus, we will try to difference it one time and denote it as *Federal_Effective_Rate_ts_diff2*. After plotting the result, we can see that the new data looks better than before. Moreover, both ACF and PACF plots suggest that there are some time series structures in *Federal_Effective_Rate_ts_diff2*, which is a good sign for us to use *Federal_Effective_Rate_ts_diff2* for modeling later. After we ran the Ljung--Box test on *Federal_Effective_Rate_ts_diff2*, we got a very small p-value. Thus, the *Federal_Effective_Rate_ts_diff2* can be used for fitting the model later.
+
 ```{r}
 
-Federal_Effective_Rate_ts_decomp <- decompose(Federal_Effective_Rate_ts)
+Federal_Effective_Rate_ts_decomp <- decompose(Federal_Effective_Rate_ts, type = "multiplicative")
 
 autoplot(Federal_Effective_Rate_ts_decomp)
 
 par(mfrow=c(1,2))
-acf(Federal_Effective_Rate_ts_decomp$random, na.action = na.pass)
-pacf(Federal_Effective_Rate_ts_decomp$random, na.action = na.pass)
+acf(Federal_Effective_Rate_ts_decomp$random, main = "Federal_Effective_Rate_ts_decomp$random", na.action = na.pass)
+pacf(Federal_Effective_Rate_ts_decomp$random, main = "Federal_Effective_Rate_ts_decomp$random", na.action = na.pass)
 
 ```
 
-\footnotesize 
+\footnotesize
 
 ```{r}
-Box.test(Federal_Effective_Rate_ts_decomp$random, lag = 1, type = c("Box-Pierce"), fitdf = 0)
 Box.test(Federal_Effective_Rate_ts_decomp$random, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
 
 \normalsize
 
-
+After decomposing *Federal_Effective_Rate_ts* via multiplicative decomposition, we find the three components of *Federal_Effective_Rate_ts*. Since we want to use stationary time series that have stable mean and variance for fitting model and forecasting, we will only use the remainder part which denotes as *Federal_Effective_Rate_ts_decomp\$random*. The ACF and PACF suggest that there are some time series structures in *Federal_Effective_Rate_ts_decomp\$random*. Also, the Ljung--Box test on *Federal_Effective_Rate_ts_decomp\$random* shows that the tested time series will have a useful autocorrelation structure that we can use for fitting the model later. Hence, we will save the *Federal_Effective_Rate_ts_decomp\$random* and use it for fitting the model later.
 
 # Time Series Modelling and Forecasting
 
+In this section, we will apply the Box-Jenkins methodology for modeling and forecasting. According to *lecture note* (Peters, 2023), The Box-Jenkins methodology has four steps: 1)Model identification, 2)Parameter estimation, 3)Verification, 4)Forecasting.
+
+For model identification, we will try to identify each time series as either a non-seasonal ARIMA(p.d.q) model or SARIMA(p,d,q)x(P,D,Q) model, the seasonal ARIMA model. According to *Forecasting: Principles and Practice* (Rob and George, 2018), the ARIMA model refers to the AutoRegressive Integrated Moving Average model which combines differencing with autoregression and a moving average model.
+
+In an autoregression model, we forecast the variable of interest using a linear combination of past values of the variable. The term autoregression indicates that it is a regression of the variable against itself. An autoregressive model of order p can be written as $y_{t} = c + \phi_{1}y_{t-1} + ...+ \phi_{1}y_{t-1} + \varepsilon_{t}$ where $\varepsilon_{t}$ is a white noise process with the assumption that it has mean 0 and variance $\sigma^{2}$. On the other hand, a moving average model uses past forecast errors in a regression-like model. A moving average model of order q can be written as $y_{t} = c + \varepsilon_{t} +\theta_{1}\varepsilon_{t-1} + ...+ \theta_{q}\varepsilon_{t-q}$ where $\varepsilon_{t}$ is a white noise process with the assumption that it has mean 0 and variance $\sigma^{2}$.
+
+The p, d, and q for ARIMA model are equivalent to the order of the autoregressive part, the degree of first differencing involved, and the order of the moving average part. An ARIMA(p,d,q) model can be written as $(1-\phi_{1}B-...-\phi_{p}B^{P})(1-B)^{d}y_{t}= c + (1+\theta_{1}B+...+\theta_{q}B^{q})\varepsilon_{t}$ where $\varepsilon_{t}$ is a white noise process with the assumption that it has mean 0 and variance $\sigma^{2}$.Hence, ARIMA model is very useful and efficient in the sense that we can express white noise, Autoregression model, and Moving average models in terms of it. A SARIMA model is a seasonal ARIMA model by including additional seasonal terms in the ARIMA models. The seasonal part of the model is $(P,D,Q)_{m}$ where m is the number of observations per year and P,D,Q are backshifts of the seasonal period.
+
+For parameter estimation, we will apply the Hyndman-Khandakar algorithm. According to *lecture note* (Peters, 2023), the Hyndman-Khandakar algorithm combines unit root tests, minimisation of the AICc and MLE to obtain an ARIMA or SARIMA model. As a result of the algorithm, we will obtain a model that could best describe the fitted data and time series.
+
+For verification, we will first check whether the residuals of the models behave like white noise through plotting and performing a portmanteau test such as the Ljung--Box test because we have the assumption that the residual should be white noise. Then, we will compare the root-mean-square error (RMSE), which provides an estimation of how well the model is able to predict the target value, of potential models, and decide the model we will use for forecasting.
+
+For Forecasting, since we care about whether we can use the unemployment rate, flexible CPI, and the federal fund effective rate to forecast the yield spread of the 2-year and 10-year U.S. T-notes, we will first fit the yield spread in a regression model with ARIMA errors. The predictor will be one of the other three time series, and we will perform three regressions separately. The regression model can be written as $Y_{t} = \beta_{0} + \beta_{1}X_{t} + \eta_{t}$ where $\eta_{t}$ is an ARIMA(p,d,q) error. According to *Forecasting: Principles and Practice* (Rob and George, 2018), the argument $xreg$ in the auto.arima() allows us to fit and find the best linear regression with ARMA errors model. Then, we will compare the regression models we obtained and use the relatively good models to undertake forecasting analysis. Finally, we will draw conclusions based on the results.
+
 ```{r}
-T10Y_2Y_ts_fit1 <- auto.arima(T10Y_2Y_ts_diff, max.order = 12)
+T10Y_2Y_ts_fit1 <- auto.arima(T10Y_2Y_ts_diff, max.order = 12) # use auto.arima() to find the best fit of the results we saved early
+T10Y_2Y_ts_fit2 <- auto.arima(T10Y_2Y_ts_decomp$random, max.order = 12) # max.order = 12 since all data has monthly frequency
 ```
 
+\footnotesize
 
-\footnotesize 
 ```{r}
-summary(T10Y_2Y_ts_fit1)
+print(T10Y_2Y_ts_fit1) # check results, make decision based on sigma^2 
+print(T10Y_2Y_ts_fit2)
 ```
+
 \normalsize
 
-
 ```{r}
-checkresiduals(T10Y_2Y_ts_fit1)
-T10Y_2Y_ts_fit2 <- auto.arima(T10Y_2Y_ts_decomp$random, max.order = 12)
+checkresiduals(T10Y_2Y_ts_fit1) # check residuals for the choose model, the residuals should be close to While noise as possible
 ```
 
 
+After using auto.arima() function to apply the Hyndman-Khandakar algorithm on the potential candidates for *T10Y_2Y_ts*'s model identification, we find that *T10Y_2Y_ts_diff* is a better choice since it has a lower variance. Checking its residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we will identify *T10Y_2Y_ts* as SARIMA(3,0,2)x(1,0,0)[12]
 
-\footnotesize 
-```{r}
-summary(T10Y_2Y_ts_fit2)
-```
-\normalsize
-
-
-
-```{r}
-checkresiduals(T10Y_2Y_ts_fit2)
-```
 
 ```{r}
 Flex_CPI_ts_fit1 <- auto.arima(Flex_CPI_ts_diff, max.order = 12)
+Flex_CPI_ts_fit2 <- auto.arima(Flex_CPI_ts_decomp$random, max.order = 12)
 ```
 
+\footnotesize
 
-\footnotesize 
 ```{r}
-summary(Flex_CPI_ts_fit1)
+print(Flex_CPI_ts_fit1) 
+print(Flex_CPI_ts_fit2)
 ```
+
 \normalsize
-
-
 
 ```{r}
 checkresiduals(Flex_CPI_ts_fit1)
 
-
-Flex_CPI_ts_fit2 <- auto.arima(Flex_CPI_ts_decomp$random, max.order = 12)
-
 ```
 
-\footnotesize 
-```{r}
-summary(Flex_CPI_ts_fit2)
-```
-\normalsize
+After using auto.arima() function to apply the Hyndman-Khandakar algorithm on the potential candidates for *Flex_CPI_ts*'s model identification, we find that *Flex_CPI_ts_decomp$random* is a better choice since it has a lower variance. Checking its residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we will identify *Flex_CPI_ts* as ARIMA(2,0,1).
 
 
 ```{r}
-checkresiduals(Flex_CPI_ts_fit2)
-
-
-```
-
-```{r}
-
 Unemployment_Rate_ts_fit1 <- auto.arima(Unemployment_Rate_ts_diff2, max.order = 12)
+Unemployment_Rate_ts_fit2 <- auto.arima(Unemployment_Rate_ts_decomp$random, max.order = 12)
+
 ```
 
-\footnotesize 
+\footnotesize
+
 ```{r}
-summary(Unemployment_Rate_ts_fit1)
+print(Unemployment_Rate_ts_fit1) 
+print(Unemployment_Rate_ts_fit2)
 ```
-\normalsize
 
+\normalsize
 
 ```{r}
 checkresiduals(Unemployment_Rate_ts_fit1)
 
-
-Unemployment_Rate_ts_fit2 <- auto.arima(Unemployment_Rate_ts_decomp$random, max.order = 12)
 ```
 
-\footnotesize 
-```{r}
-summary(Unemployment_Rate_ts_fit2)  #compare AIC, residuals, and RMSE(lowever, better)
-```
-\normalsize
+After using auto.arima() function to apply the Hyndman-Khandakar algorithm on the potential candidates for *Unemployment_Rate_ts*'s model identification, we find that *Unemployment_Rate_ts_diff2* is a better choice since it has a lower variance. Checking its residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we will identify *Unemployment_Rate_ts* as ARIMA(0,0,1).
 
 
 ```{r}
-checkresiduals(Unemployment_Rate_ts_fit2)
-
-```
-
-```{r}
-
-
 
 Federal_Effective_Rate_ts_fit1 <- auto.arima(Federal_Effective_Rate_ts_diff2, max.order = 12)
+
+Federal_Effective_Rate_ts_fit2 <- auto.arima(Federal_Effective_Rate_ts_decomp$random, max.order = 12)
+
 ```
 
-\footnotesize 
+\footnotesize
+
 ```{r}
-summary(Federal_Effective_Rate_ts_fit1)
+print(Federal_Effective_Rate_ts_fit1) 
+print(Federal_Effective_Rate_ts_fit2)
+
 ```
+
 \normalsize
-
-
-```{r}
-checkresiduals(Federal_Effective_Rate_ts_fit1)
-
-
-
-Federal_Effective_Rate_ts_fit2 <- auto.arima(diff(Federal_Effective_Rate_ts_decomp$random), max.order = 12)
-```
-
-\footnotesize 
-```{r}
-summary(Federal_Effective_Rate_ts_fit2)
-```
-\normalsize
-
 
 ```{r}
 checkresiduals(Federal_Effective_Rate_ts_fit2)
 
+```
+
+After using auto.arima() function to apply the Hyndman-Khandakar algorithm on the potential candidates for *Federal_Effective_Rate_ts*'s model identification, we find that *Federal_Effective_Rate_ts_decomp$random* is a better choice since it has a lower variance. Checking its residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we will identify *Federal_Effective_Rate_ts* as ARIMA(3,0,3).
 
 
+```{r}
+
+final1 <- auto.arima(T10Y_2Y_ts, xreg=Flex_CPI_ts)  # fit the ts we want to study with regressor, we can fit multiple regressors but only do one at time due to requirements
+final2 <- auto.arima(T10Y_2Y_ts, xreg=Unemployment_Rate_ts)
+final3 <- auto.arima(T10Y_2Y_ts, xreg=Federal_Effective_Rate_ts)
 
 ```
 
 
+\footnotesize
+
+```{r}
+print(final1) # check reuslts and make decision
+checkresiduals(final1)
+```
+
+\normalsize
+
+After using the auto.arima() function to apply the Hyndman-Khandakar algorithm on the predictor *Flex_CPI_ts* to find the best linear regression with ARMA errors model for *T10Y_2Y_ts*, we obtained a regression model with SARIMA(3,1,2)(1,0,0)[12] errors. We notice that the obtained model is almost identical to the model that we use to identify the *T10Y_2Y_ts* before. After comparing the two models' coefficients and parameters, we can see the differences between two models' coefficients are small and the coefficient for the predictor is close to zero. Checking the obtained model's residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we can conclude that we shouldn't forecast *T10Y_2Y_ts* with *Flex_CPI_ts* since *Flex_CPI_ts* is not informative for *T10Y_2Y_ts*.
 
 
 
+\footnotesize
+
+```{r}
+print(final2) 
+checkresiduals(final2)
+
+```
+
+\normalsize
+
+After using the auto.arima() function to apply the Hyndman-Khandakar algorithm on the predictor *Unemployment_Rate_ts* to find the best linear regression with ARMA errors model for *T10Y_2Y_ts*, we obtained a regression model with SARIMA(3,1,2)(1,0,0)[12] errors. We notice that the obtained model is almost identical to the model that we use to identify the *T10Y_2Y_ts* before. After comparing the two models' coefficients and parameters, we can see the differences between two models' coefficients are small and the coefficient for the predictor is close to zero. Checking the obtained model's residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we can conclude that we shouldn't forecast *T10Y_2Y_ts* with *Unemployment_Rate_ts* since *Unemployment_Rate_ts* is not informative for *T10Y_2Y_ts*.
+
+\footnotesize
+
+```{r}
+print(final3) 
+checkresiduals(final3)
+
+```
+
+\normalsize
+
+
+After using the auto.arima() function to apply the Hyndman-Khandakar algorithm on the predictor *Federal_Effective_Rate_ts* to find the best linear regression with ARMA errors model for *T10Y_2Y_ts*, we obtained a regression model with SARIMA(0,1,2)(1,0,0)[12] errors. The obtained model has a low variance, and is significantly different from the model that we use to identify the *T10Y_2Y_ts* before. Checking the obtained model's residuals, we can see from the plots and the result of the Ljung-Box test that its residuals are very close to white noise. Therefore, we will forecast *T10Y_2Y_ts* with *Federal_Effective_Rate_ts* since *Federal_Effective_Rate_ts* is informative for *T10Y_2Y_ts*.
 
 
 
+```{r}
+
+
+fcast <- forecast::forecast(final3, xreg=rep(mean(Federal_Effective_Rate_ts),12), h = 12) 
+# forecast, the forecast package must be specified due to packages overlapping
+# calculate forecasts for the next 12 months assuming that the future percentage of the federal fund effective rate will be equal to the mean percentage from last 20 years.
+# if the mean is too high, forecasting result won't be good since we have negative yield spread value now
+# This phenomenon in itself tells something about the data
+autoplot(fcast) + xlab("Year") + ylab("Percentage") + ggtitle("Forecast T10Y_2Y_ts Regression with SARIMA(0,1,2)(1,0,0)[12] errors for the next 12 months")
+# plot the result 
+```
 
 
 
+```{r}
+fcast2 <- forecast::forecast(T10Y_2Y_ts_fit1, h = 12) # forecast the identification models to compare
+autoplot(fcast2) + xlab("Year") + ylab("Percentage") + ggtitle("Forecast T10Y_2Y_ts as SARIMA(3,0,2)(1,0,0)[12] with zero mean for the next 12 months")
+```
+
+```{r}
+fcast3 <- forecast::forecast(T10Y_2Y_ts_decomp$trend, h = 12) # forecast the trend to compare
+autoplot(fcast3) + xlab("Year") + ylab("Percentage") + ggtitle("Forecast T10Y_2Y_ts's trend for the next 12 months")
+```
 
 
-
-
-
-
-
-
-
-
-
+First, we use *T10Y_2Y_ts* regression model with SARIMA(0,1,2)(1,0,0)[12] errors to forecast the next 12 months' yield spread. The forecasting result isn't plausible since it dramatically jumps from a negative value to a positive value within a month. However, overall it suggests that the yield spread will be stable around a certain level, which is a reasonable prediction. Then we use SARIMA(3,0,2)(1,0,0)[12] model, the model we used to identify the *T10Y_2Y_ts* early, to forecast the next 12 months' yield spread. The forecasting result suggests that the yield spread will very slowly increase during the next 12 months, which is a reasonable prediction since the model describes the random part of the *T10Y_2Y_ts* that should be quite stable after applying the Hyndman-Khandakar algorithm. This also indicates the future value of *T10Y_2Y_ts* is decided by components of its time series structure such as trend. Next, we use the *T10Y_2Y_ts_decomp\$trend* to forecast, the result is possible but isn't plausible since it basically suggests that the U.S. economic is doomed.
 
 
 
@@ -483,6 +557,17 @@ checkresiduals(Federal_Effective_Rate_ts_fit2)
 ```{r}
 
 ```
+
+
+Overall, after performing data analysis and diagnosis, we identify the yield spread of the 2-year and 10-year U.S. T-notes as ARIMA(3,0,2)x(1,0,0)[12], the flexible CPI as ARIMA(2,0,1), the unemployment rate as ARIMA(0,0,1), and the federal found effective rate as ARIMA(3,0,3). After completing model identification, for the purpose of forecasting, we also fit the yield spread in a regression model with ARIMA errors, where we use the yield spread as response and one of the three other time series as predictor. Repeating the above process three times and comparing the results we obtained, we decide to use the yield spread regression model with SARIMA(0,1,2)(1,0,0)[12] errors that adapts the federal fund effective rate as a predictor for forecasting. 
+
+The other two models that adapt the unemployment rate and the flexible CPI as a predictor separately are not significantly different from the yield spread’s identification model. Hence, the unemployment rate and the flexible CPI are not informative to the yield spread according to our data analysis. One reason might be the fact that the models of these two time series are reduced models of the yield spread model, which makes them less informative for the yield spread model. On the other hand, the federal fund effective rate model isn't a reduced model of the yield spread model, which makes it informative. Moreover, from the economic perspective, it makes sense that an increasing federal fund effective rate will generate a decreasing yield spread since a higher federal fund effective rate will increase the yield of short-term T-notes, which results in decreasing the yield spread after all. From this point of view, the regression model with SARIMA errors is quite successful in establishing the relationship.
+
+Finally, we forecast the next 12 months' yield spread with two models, the yield spread regression model with SARIMA(0,1,2)(1,0,0)[12] errors and the yield spread identification model. Comparing results, we find that the yield spread identification model gives a more plausible prediction since the prediction it makes is more realistic. On the other hand, another model predicts a dramatic change will happen to the yield spread within a month, which isn't quite possible. In addition, we also forecast the trend of the yield spread to compare and get a result that is possible but isn't plausible. However, both models suggest that the yield spread's trending and percentage value will be quite stable for the next 12 months, which implicitly predicts that the U.S. economy won't perform well for the next 12 months. Hence, we draw the conclusion that the yield spread of the 2-year and 10-year U.S. T-notes is not affected by the unemployment rate and the flexible CPI, but rather by the federal fund effective rate, which is reasonable from both modeling and economic perspectives. However, the model that best establishes the relationship between the yield spread and the federal fund effective rate isn't good at forecasting due to the relatively high mean of the past 20 years of the federal fund effective rate. To perform better forecasting, further adjustments and transformations are needed since the relatively high mean of the federal fund effective rate could be one possible reason that causes the regression model with SARIMA errors to perform bad forecasting.
+
+
+
+
 
 \newpage
 
@@ -528,3 +613,11 @@ Rob J Hyndman and George Athanasopoulos., 2018. *Forecasting: Principles and Pra
 
 U.S. Bureau of Labor Statistics., 2023. *Unemployment Rate [UNRATE]*. retrieved from FRED, Federal Reserve Bank of St. Louis., [Online], Accessed: 6 March 2023\
 Available: <https://fred.stlouisfed.org/series/UNRATE>
+
+
+
+
+
+
+
+
